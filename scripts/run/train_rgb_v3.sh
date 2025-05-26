@@ -7,7 +7,10 @@ export PYTHONPATH="$(cd "$(dirname "$0")/../.." && pwd)":$PYTHONPATH
 DATA_ROOT="/data2"  # 필요시 /data2 등으로 변경
 
 # 첫 번째 인자로 use_layernorm 값을 받음 (기본값 true)
-use_layernorm=${1:-true}
+use_layernorm=true  # true 또는 false로 직접 지정
+
+# learning rate도 직접 지정
+lr=1e-3
 
 n_gpu=2
 dist_port=12400
@@ -48,6 +51,7 @@ for ((i=0; i<length; i++)); do
       -D _num_gpu=$n_gpu -D _num_worker_per_gpu=$num_worker_per_gpu -D _batch_size_per_gpu=$batch_size_per_gpu \
       -D sca=$sca \
       -D use_layernorm=$use_layernorm \
+      -D lr=$lr \
       > temp_config.yml
 		torchrun --nproc_per_node=${n_gpu} --nnodes=1 --rdzv-backend=c10d \
 		--rdzv-endpoint=localhost:${dist_port} \
