@@ -1,0 +1,16 @@
+.DS_Store
+.idea/*
+experiments
+logs/
+*results*
+*__pycache__*
+datasets
+basicsr.egg-info
+.vscode
+temp/
+*.png
+*.raw
+ValidationGtBlocksSrgb.mat
+ValidationGtBlocksRaw.mat
+ValidationNoisyBlocksRaw.mat
+pretrained_models/

@@ -1,0 +1,97 @@
+name: NAFNetv2-SIDD-wb
+model_type: ImageRestorationModel
+scale: 1
+# num_gpu: 1 # single GPU test
+num_gpu: 4
+manual_seed: 10
+
+datasets:
+  train:
+    name: SIDD
+    type: PairedImageRawDataset
+    dataroot_gt: /data1/SIDD_raw/train/gt_raw_crops_lmdb
+    dataroot_lq: /data1/SIDD_raw/train/lq_raw_crops_lmdb
+
+    filename_tmpl: '{}'
+    io_backend:
+      type: lmdb
+    
+    gt_size: 256
+    use_flip: false
+    use_rot: false
+
+    # data loader
+    use_shuffle: true
+    num_worker_per_gpu: 16
+    # batch_size_per_gpu: 64
+    batch_size_per_gpu: 8
+    dataset_enlarge_ratio: 1
+    prefetch_mode: ~
+
+  val: 
+    name: SIDD_val
+    type: PairedImageRawDataset
+    dataroot_gt: /data1/SIDD_raw/valid/valid_gt_raw_crops
+    dataroot_lq: /data1/SIDD_raw/valid/valid_lq_raw_crops
+    io_backend:
+      type: disk
+  
+network_g:
+  type: NAFNetv2
+  ch: 90
+  sc0: 2
+  sc1: 0
+  rate_mid: 0.16
+  middle_blk_num: 9
+
+path:
+  pretrain_network_g: ~
+  strict_load_g: true
+  resume_state: ~
+
+train:
+  optim_g: 
+    type: AdamW
+    lr: !!float 5e-4
+    weight_decay: 0.
+    # betas: []
+  
+  scheduler:
+    type: LinearLR
+    start_factor: 1.
+    end_factor: 0.1
+  
+  # total_iter: !!float 5e5
+  total_iter: !!float 2e5
+  warmup_iter: -1
+
+  # losses
+  pixel_opt:
+    type: PSNRLoss
+    loss_weight: 1
+    reduction: mean
+  
+val:
+  val_freq: !!float 957
+  save_img: false
+  use_img: false
+
+  metrics:
+    psnr: # metric name, can be arbitrary
+      type: calculate_psnr
+      crop_border: 0
+      test_y_channel: false
+    ssim:
+      type: calculate_ssim
+      crop_border: 0
+      test_y_channel: false
+
+
+# logging settings
+logger:
+  print_freq: 100
+  save_checkpoint_freq: !!float 2e3
+  use_tb_logger: true
+  wandb:
+    project: ~
+    resume_id: ~

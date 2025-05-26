@@ -1,0 +1,55 @@
+name: SIDD-Raw-test
+scale: 1
+
+datasets:
+  val:
+    name: SIDD_Raw
+    type: SiddBenchmarkDataset
+    dataroot_gt: /data1/SIDD_raw/valid/valid_gt_srgb_crops
+    # dataroot_lq: /data1/SIDD_raw/valid/valid_lq_raw_crops
+    dataroot_lq: /data1/SIDD_raw/valid/valid_gt_raw_crops
+    benchmark_folder: /home/swhong/SIDD_Benchmark_Data
+
+    filename_tmpl: '{}'
+    io_backend:
+      type: disk
+    
+    gt_size: 256
+    use_flip: false
+    use_rot: false
+
+    # data loader
+
+network_g:
+  type: ~
+
+path:
+  pretrain_network_g: ~
+  strict_load_g: true
+  resume_state: ~
+
+train:
+  optim_g:
+    type: ~
+  
+  scheduler:
+    type: ~
+  
+  total_iter: 400
+  warmup_iter: -1
+
+  pixel_opt:
+    type: ~
+
+val:
+  val_freq: ~
+  save_img: ~
+  use_image: ~
+
+  metrics:
+    ~
+  
+logger: ~
+
+dist_params: 
+  backend: nccl

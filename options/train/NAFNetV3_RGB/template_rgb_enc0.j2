@@ -1,0 +1,107 @@
+name: NAFNetV3-RGB-enc0
+model_type: ImageRestorationModel
+scale: 1
+num_gpu: !!int {{_num_gpu}}
+manual_seed: 10
+
+datasets:
+  train:
+    name: SIDD
+    type: PairedImageDataset
+    dataroot_gt: {{data_root}}/SIDD/train/gt_crops.lmdb
+    dataroot_lq: {{data_root}}/SIDD/train/input_crops.lmdb
+    dataroot_gt_raw: {{data_root}}/SIDD_raw/train/train_gt_raw_crops
+
+    filename_tmpl: '{}'
+    io_backend:
+      type: lmdb
+    
+    gt_size: 256
+    use_flip: false
+    use_rot: false
+
+    # data loader
+    use_shuffle: true
+    num_worker_per_gpu: !!int {{_num_worker_per_gpu}}
+    batch_size_per_gpu: !!int {{_batch_size_per_gpu}}
+    dataset_enlarge_ratio: 1
+    prefetch_mode: ~
+  
+  val: 
+    name: SIDD_val
+    type: PairedImageDataset
+    dataroot_gt: {{data_root}}/SIDD/val/gt_crops.lmdb
+    dataroot_lq: {{data_root}}/SIDD/val/input_crops.lmdb
+    dataroot_gt_raw: {{data_root}}/SIDD_raw/valid/valid_gt_raw_crops
+    io_backend:
+      type: lmdb
+
+network_g:
+  type: NAFNetV3_rgb
+  input_shuffle: 2
+  shuffle: !!int {{shuffle1}}
+  width: !!int {{width}}
+  ch_mid: !!int {{ch_mid}}
+  enc_blk_nums: []
+  middle_blk_num: !!int {{mid}}
+  dec_blk_nums: []
+  ending_blk_type: {{end_type}}
+  middle_blk_type: {{mid_type}}
+  sca: {{sca}}
+
+path:
+  pretrain_network_g: ~
+  strict_load_g: true
+  resume_state: ~
+  
+# training settings
+train:
+  optim_g:
+    type: AdamW
+    lr: !!float 1e-3
+    weight_decay: 0.
+    betas: [0.9, 0.9]
+
+  scheduler:
+    type: TrueCosineAnnealingLR
+    T_max: 200000
+    eta_min: !!float 1e-7
+
+  total_iter: {{total_iter}}
+  warmup_iter: -1 # no warm up
+
+  # losses
+  pixel_opt:
+    type: PSNRLoss
+    loss_weight: 1
+    reduction: mean
+
+# validation settings
+val:
+  val_freq: !!float 2e3
+  save_img: false
+  use_image: false
+
+  metrics:
+    psnr: # metric name, can be arbitrary
+      type: calculate_psnr
+      crop_border: 0
+      test_y_channel: false
+    ssim:
+      type: calculate_ssim
+      crop_border: 0
+      test_y_channel: false
+
+# logging settings
+logger:
+  print_freq: 100
+  save_checkpoint_freq: !!float 2e3
+  use_tb_logger: true
+  wandb:
+    project: ~
+    resume_id: ~
+
+# dist training settings
+dist_params:
+  backend: nccl
+  port: 29500
