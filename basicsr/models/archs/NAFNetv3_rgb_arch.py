@@ -34,7 +34,7 @@ class EndBlock(nn.Module):
 
 
 class NAFBlockV3(nn.Module):
-  def __init__(self, c, DW_Expand=2, FFN_Expand=2, drop_out_rate=0., inverted=False, sca=True, **kwargs):
+  def __init__(self, c, DW_Expand=2, FFN_Expand=2, drop_out_rate=0., inverted=False, sca=True, use_layernorm=True, **kwargs):
     super().__init__()
     dw_channel = c * DW_Expand if not inverted else c
     self.conv1 = nn.Conv2d(in_channels=c, out_channels=dw_channel, kernel_size=1, padding=0, stride=1, groups=1, bias=True)
@@ -54,8 +54,8 @@ class NAFBlockV3(nn.Module):
     self.conv4 = nn.Conv2d(in_channels=c, out_channels=ffn_channel, kernel_size=1, padding=0, stride=1, groups=1, bias=True)
     self.conv5 = nn.Conv2d(in_channels=ffn_channel // 2, out_channels=c, kernel_size=1, padding=0, stride=1, groups=1, bias=True)
 
-    self.norm1 = LayerNorm2d(c)
-    self.norm2 = LayerNorm2d(c)
+    self.norm1 = LayerNorm2d(c) if use_layernorm else nn.Identity()
+    self.norm2 = LayerNorm2d(c) if use_layernorm else nn.Identity()
 
     self.dropout1 = nn.Dropout(drop_out_rate) if drop_out_rate > 0. else nn.Identity()
     self.dropout2 = nn.Dropout(drop_out_rate) if drop_out_rate > 0. else nn.Identity()
@@ -116,7 +116,7 @@ class NAFBlockV3_Type1(nn.Module):
   sca: o
   p.conv + p.conv + dw.conv
   """
-  def __init__(self, c, c_mid=None, rate_mid=None, drop_out_rate=0., kernel_size=3, padding=1, **kwargs):
+  def __init__(self, c, c_mid=None, rate_mid=None, drop_out_rate=0., kernel_size=3, padding=1, use_layernorm=True, **kwargs):
     super().__init__()
     if c_mid == None and rate_mid == None:
       c_mid = c
@@ -135,8 +135,8 @@ class NAFBlockV3_Type1(nn.Module):
     self.conv3 = Conv(c, c, kernel_size=3, padding=1, mid_channels=c_mid, rate_mid=rate_mid)
     self.conv4 = Conv(c//2, c, kernel_size=3, padding=1, mid_channels=c_mid, rate_mid=rate_mid)
 
-    self.norm1 = LayerNorm2d(c)
-    self.norm2 = LayerNorm2d(c)
+    self.norm1 = LayerNorm2d(c) if use_layernorm else nn.Identity()
+    self.norm2 = LayerNorm2d(c) if use_layernorm else nn.Identity()
     
     self.dropout1 = nn.Dropout(drop_out_rate) if drop_out_rate > 0. else nn.Identity()
     self.dropout2 = nn.Dropout(drop_out_rate) if drop_out_rate > 0. else nn.Identity()
@@ -169,8 +169,8 @@ class NAFBlockV3_Type1(nn.Module):
 # class EndBlock()
 
 class NAFBlockV3_nosca(NAFBlockV3):
-  def __init__(self, c, DW_Expand=2, FFN_Expand=2, drop_out_rate=0, inverted=False, sca=True, **kwargs):
-    super().__init__(c, DW_Expand, FFN_Expand, drop_out_rate, inverted, sca, **kwargs)
+  def __init__(self, c, DW_Expand=2, FFN_Expand=2, drop_out_rate=0, inverted=False, sca=True, use_layernorm=True, **kwargs):
+    super().__init__(c, DW_Expand, FFN_Expand, drop_out_rate, inverted, sca, use_layernorm, **kwargs)
     
   def forward(self, inp):
     x = inp
@@ -195,8 +195,8 @@ class NAFBlockV3_nosca(NAFBlockV3):
     return y + x * self.gamma
 
 class NAFBlockV3_Type1_nosca(NAFBlockV3_Type1):
-  def __init__(self, c, c_mid=None, rate_mid=None, drop_out_rate=0, kernel_size=3, padding=1, **kwargs):
-    super().__init__(c, c_mid, rate_mid, drop_out_rate, kernel_size, padding, **kwargs)
+  def __init__(self, c, c_mid=None, rate_mid=None, drop_out_rate=0, kernel_size=3, padding=1, use_layernorm=True, **kwargs):
+    super().__init__(c, c_mid, rate_mid, drop_out_rate, kernel_size, padding, use_layernorm, **kwargs)
   
   def forward(self, inp):
     x = inp
@@ -221,7 +221,7 @@ class NAFBlockV3_Type1_nosca(NAFBlockV3_Type1):
 
 
 class NAFNetV3_rgb(nn.Module):
-  def __init__(self, input_shuffle=1, width=16, middle_blk_num=1, enc_blk_nums=[], dec_blk_nums=[], shuffle=1, inverted=False, middle_blk_type=0, sca=True, rate_mid=None, ch_mid=None, ending_blk_type=0):
+  def __init__(self, input_shuffle=1, width=16, middle_blk_num=1, enc_blk_nums=[], dec_blk_nums=[], shuffle=1, inverted=False, middle_blk_type=0, sca=True, rate_mid=None, ch_mid=None, ending_blk_type=0, use_layernorm=True):
     super().__init__()
     self.input_shuffle = input_shuffle
     self.shuffle = shuffle
@@ -249,14 +249,14 @@ class NAFNetV3_rgb(nn.Module):
 
     if middle_blk_type == 1:
       if sca == True:
-        middle_blk_cls = NAFBlockV3_Type1
+        middle_blk_cls = lambda *args, **kwargs: NAFBlockV3_Type1(*args, use_layernorm=use_layernorm, **kwargs)
       else:
-        middle_blk_cls = NAFBlockV3_Type1_nosca
+        middle_blk_cls = lambda *args, **kwargs: NAFBlockV3_Type1_nosca(*args, use_layernorm=use_layernorm, **kwargs)
     else:
       if sca == True:
-        middle_blk_cls = NAFBlockV3
+        middle_blk_cls = lambda *args, **kwargs: NAFBlockV3(*args, use_layernorm=use_layernorm, **kwargs)
       else:
-        middle_blk_cls = NAFBlockV3_nosca
+        middle_blk_cls = lambda *args, **kwargs: NAFBlockV3_nosca(*args, use_layernorm=use_layernorm, **kwargs)
     print(f"middle block type: {middle_blk_type}")
 
     chan = width
